@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block content %}
+
+<header class="page-header">
+    <h1>Combined Risk Dashboard</h1>
+    <div class="header-meta">Real-time Monitoring System</div>
+</header>
+
+<div class="grid">
+
+    <!-- LANDSLIDE RISK -->
+    <div class="card">
+        <h3>Landslide Risk</h3>
+        <div id="landslideRisk" class="risk-box"></div>
+        <canvas id="miniLS"></canvas>
+    </div>
+
+    <!-- FLOOD RISK -->
+    <div class="card">
+        <h3>Flood Risk</h3>
+        <div id="floodRisk" class="risk-box"></div>
+        <canvas id="miniFL"></canvas>
+    </div>
+
+    <!-- COMBINED RISK -->
+    <div class="card wide">
+        <h3>Combined Risk</h3>
+        <div id="combinedRisk" class="risk-box large"></div>
+        <canvas id="miniCombined"></canvas>
+    </div>
+
+    <!-- NOTIFICATIONS -->
+    <div class="card wide">
+        <h3>Notifications</h3>
+        <ul id="globalNotif"></ul>
+    </div>
+
+    <!-- MACHINE LEARNING CONTROL -->
+    <div class="card wide">
+        <h3>Machine Learning Control</h3>
+        <p style="margin-bottom: 10px; color: var(--muted);">
+            Control calibration and model training directly from the dashboard.
+        </p>
+
+        <button id="btnCalibToggle"
+            style="padding:10px 18px; border:none; border-radius:8px; background:#4caf50; color:white; cursor:pointer; font-size:15px;">
+            ▶ Start Calibration
+        </button>
+
+        <button id="btnTrain"
+            style="padding:10px 18px; border:none; border-radius:8px; background:#2196f3; color:white; cursor:pointer; font-size:15px; margin-left:10px;">
+            ⚙ Train Model
+        </button>
+
+        <p id="mlStatusMsg" style="margin-top:15px; color:var(--text); font-size:15px;"></p>
+    </div>
+
+</div>
+
+
+<script>
+// =======================================================
+// AUTO UPDATE DASHBOARD (Combined, Flood, Landslide)
+// =======================================================
+function updateRisks() {
+    fetch("/api/combined")
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById("landslideRisk").innerText = data.landslide;
+            document.getElementById("floodRisk").innerText = data.flood;
+            document.getElementById("combinedRisk").innerText = data.combined;
+        });
+}
+setInterval(updateRisks, 1000);
+updateRisks();
+
+
+// =======================================================
+// MACHINE LEARNING CONTROL
+// =======================================================
+
+// Toggle Calibration
+document.getElementById("btnCalibToggle").onclick = function () {
+    fetch("/api/calibration", { method: "POST" })
+        .then(r => r.json())
+        .then(res => {
+            document.getElementById("mlStatusMsg").innerText = res.msg;
+        });
+
+    // Flash button
+    let btn = document.getElementById("btnCalibToggle");
+    btn.style.opacity = "0.6";
+    setTimeout(() => btn.style.opacity = "1", 400);
+};
+
+// Train Model
+document.getElementById("btnTrain").onclick = function () {
+    fetch("/api/train", { method: "POST" })
+        .then(r => r.json())
+        .then(res => {
+            document.getElementById("mlStatusMsg").innerText = res.msg;
+        });
+
+    // Flash button
+    let btn = document.getElementById("btnTrain");
+    btn.style.opacity = "0.6";
+    setTimeout(() => btn.style.opacity = "1", 400);
+};
+
+
+// =======================================================
+// LIVE STATE UPDATES (Mode, Messages)
+// =======================================================
+function updateState() {
+    fetch("/api/state")
+        .then(r => r.json())
+        .then(s => {
+            if (s.mode === "calibration") {
+                document.getElementById("btnCalibToggle").innerText = "■ Stop Calibration";
+                document.getElementById("btnCalibToggle").style.background = "#f44336";
+            } else {
+                document.getElementById("btnCalibToggle").innerText = "▶ Start Calibration";
+                document.getElementById("btnCalibToggle").style.background = "#4caf50";
+            }
+
+            document.getElementById("mlStatusMsg").innerText = s.message;
+        });
+}
+setInterval(updateState, 1000);
+updateState();
+</script>
+
+<script src="{{ url_for('static', filename='js/combined.js') }}"></script>
+{% endblock %}
